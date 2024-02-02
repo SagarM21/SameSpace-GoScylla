@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -18,8 +17,9 @@ var session *gocql.Session
 func init() {
 	var err error
 
-	
-	cluster.Timeout = 30 * time.Second // Adjust the timeout duration as needed
+	// Connect to ScyllaDB -- DOCKER
+	cluster := gocql.NewCluster("127.0.0.1")
+	cluster.Timeout = 30 * time.Second 
 
 	
 	cluster.Keyspace = "todo"
@@ -27,19 +27,7 @@ func init() {
 	if err != nil {
     	panic("Failed to connect to Cassandra/ScyllaDB: " + err.Error())
 	}
-
-
-    var query = session.Query("SELECT * FROM system.clients")
-
-    if rows, err := query.Iter().SliceMap(); err == nil {
-        for _, row := range rows {
-            fmt.Printf("%v\n", row)
-        }
-    } else {
-        panic("Query error: " + err.Error())
-    }
-
-	// Create keyspace and table if not exists
+    
 }
 
 func createKeyspaceAndTable() {
@@ -134,6 +122,7 @@ func createTodo(c *gin.Context) {
 
 	todo.CreatedFormatted = time.Unix(time.Now().Unix(), 0).Format("01/02/2006 15:04:05")
     todo.UpdatedFormatted = time.Unix(time.Now().Unix(),0).Format("01/02/2006 15:04:05")
+    todo.Status = strings.ToLower(todo.Status)
 
 	if err := session.Query(`
 		INSERT INTO todo.todos (todo_id, user_id, title, description, status, updated, created_formatted, updated_formatted)
@@ -317,6 +306,7 @@ func filterTodos(c *gin.Context) {
     }
 }
 
+// PAGINATED END POINT
 func listTodos(c *gin.Context) {
 	pageStr := c.Query("page")
 	sizeStr := c.Query("size")
